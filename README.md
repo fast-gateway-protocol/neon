@@ -5,7 +5,7 @@ Fast Neon Postgres operations via FGP daemon. Query databases, manage branches, 
 ## Installation
 
 ```bash
-git clone https://github.com/wolfiesch/fgp-neon.git
+git clone https://github.com/fast-gateway-protocol/neon.git
 cd fgp-neon
 cargo build --release
 ```
