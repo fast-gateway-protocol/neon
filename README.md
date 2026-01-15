@@ -81,6 +81,91 @@ FGP keeps the API connection warm and reuses auth tokens.
 - **Branch management**: Create/switch branches programmatically
 - **Data validation**: Run checks without connection overhead
 
+## Troubleshooting
+
+### Invalid API Key
+
+**Symptom:** Requests fail with 401 or "unauthorized"
+
+**Solutions:**
+1. Verify key is set: `echo $NEON_API_KEY`
+2. Check key format: should start with `neon_api_`
+3. Generate new key at https://console.neon.tech/app/settings/api-keys
+
+### Project Not Found
+
+**Symptom:** "Project not found" for existing project
+
+**Check:**
+1. Project ID is correct (format: `proj-xxxxx`)
+2. API key has access to the project
+3. List projects first: `fgp call neon.projects`
+
+### Branch Not Found
+
+**Symptom:** "Branch not found" when querying
+
+**Check:**
+1. Branch ID format: `br-xxxxx`
+2. Branch belongs to specified project
+3. List branches: `fgp call neon.branches '{"project_id": "proj-xxx"}'`
+
+### SQL Query Errors
+
+**Symptom:** Queries fail with syntax or permission errors
+
+**Check:**
+1. SQL syntax is valid for Postgres
+2. Table/column names are correct
+3. User has SELECT permissions on target tables
+4. Database name is specified if not using default
+
+### Connection Timeout
+
+**Symptom:** Queries hang or timeout
+
+**Solutions:**
+1. Neon databases auto-suspend after inactivity
+2. First query may take 1-2s to wake the database
+3. Check Neon status: https://neon.tech/status
+4. Verify branch is not suspended in console
+
+### Empty Results
+
+**Symptom:** Queries return empty when data exists
+
+**Check:**
+1. Correct database specified (default is `neondb`)
+2. Schema is correct (default is `public`)
+3. Table has data: `SELECT COUNT(*) FROM table_name`
+
+### Connection Refused
+
+**Symptom:** "Connection refused" when calling daemon
+
+**Solution:**
+```bash
+# Check daemon is running
+pgrep -f fgp-neon
+
+# Restart daemon
+./target/release/fgp-neon stop
+export NEON_API_KEY="neon_api_xxxxx"
+./target/release/fgp-neon start
+
+# Verify socket
+ls ~/.fgp/services/neon/daemon.sock
+```
+
+### Rate Limiting
+
+**Symptom:** 429 errors on bulk operations
+
+**Solutions:**
+1. Neon has API rate limits
+2. Add delays between rapid queries
+3. Use connection pooling for high-frequency access
+
 ## License
 
 MIT
