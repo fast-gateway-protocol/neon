@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 description = "FGP daemon for Neon (serverless Postgres) operations via HTTP API"
 license = "MIT"
+repository = "https://github.com/fast-gateway-protocol/neon"
 authors = ["Wolfgang Schoenberger"]
 
 [[bin]]
