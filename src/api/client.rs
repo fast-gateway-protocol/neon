@@ -214,6 +214,7 @@ impl NeonClient {
         }
 
         #[derive(Deserialize)]
+        #[allow(dead_code)]
         struct Endpoint {
             id: String,
             host: String,

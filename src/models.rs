@@ -49,6 +49,7 @@ pub struct Database {
 }
 
 /// Database table info.
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TableInfo {
     pub schema: String,
@@ -58,6 +59,7 @@ pub struct TableInfo {
 }
 
 /// Table column info.
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ColumnInfo {
     pub column_name: String,
