@@ -51,10 +51,7 @@ impl NeonClient {
             anyhow::bail!("API request failed: {} - {}", status, text);
         }
 
-        response
-            .json()
-            .await
-            .context("Failed to parse response")
+        response.json().await.context("Failed to parse response")
     }
 
     /// Make an authenticated POST request.
@@ -78,10 +75,7 @@ impl NeonClient {
             anyhow::bail!("API request failed: {} - {}", status, text);
         }
 
-        response
-            .json()
-            .await
-            .context("Failed to parse response")
+        response.json().await.context("Failed to parse response")
     }
 
     /// Make an authenticated DELETE request.
@@ -177,14 +171,25 @@ impl NeonClient {
     }
 
     /// Get database tables.
-    pub async fn get_tables(&self, project_id: &str, branch_id: &str, database: &str) -> Result<Value> {
+    pub async fn get_tables(
+        &self,
+        project_id: &str,
+        branch_id: &str,
+        database: &str,
+    ) -> Result<Value> {
         // Use the SQL endpoint to query tables
         let query = "SELECT schemaname as schema, tablename as name FROM pg_catalog.pg_tables WHERE schemaname NOT IN ('pg_catalog', 'information_schema') ORDER BY schemaname, tablename";
         self.run_sql(project_id, branch_id, database, query).await
     }
 
     /// Get table schema.
-    pub async fn get_table_schema(&self, project_id: &str, branch_id: &str, database: &str, table: &str) -> Result<Value> {
+    pub async fn get_table_schema(
+        &self,
+        project_id: &str,
+        branch_id: &str,
+        database: &str,
+        table: &str,
+    ) -> Result<Value> {
         let query = format!(
             "SELECT column_name, data_type, is_nullable::boolean, column_default FROM information_schema.columns WHERE table_name = '{}' ORDER BY ordinal_position",
             table.replace('\'', "''") // Basic SQL injection prevention
@@ -193,7 +198,13 @@ impl NeonClient {
     }
 
     /// Run a SQL query via the Neon SQL endpoint.
-    pub async fn run_sql(&self, project_id: &str, branch_id: &str, database: &str, query: &str) -> Result<Value> {
+    pub async fn run_sql(
+        &self,
+        project_id: &str,
+        branch_id: &str,
+        database: &str,
+        query: &str,
+    ) -> Result<Value> {
         // First, get the connection string / endpoint for this branch
         let endpoints_url = format!("{}/projects/{}/endpoints", API_BASE, project_id);
 
@@ -238,12 +249,16 @@ impl NeonClient {
         let response = self
             .client
             .post(&sql_url)
-            .header("Neon-Connection-String", format!("postgres://{}:{}@{}/{}",
-                "neondb_owner", // Default role
-                self.api_key,
-                endpoint.host,
-                database
-            ))
+            .header(
+                "Neon-Connection-String",
+                format!(
+                    "postgres://{}:{}@{}/{}",
+                    "neondb_owner", // Default role
+                    self.api_key,
+                    endpoint.host,
+                    database
+                ),
+            )
             .header("Content-Type", "application/json")
             .json(&body)
             .send()
@@ -256,7 +271,10 @@ impl NeonClient {
             anyhow::bail!("SQL execution failed: {} - {}", status, text);
         }
 
-        response.json().await.context("Failed to parse SQL response")
+        response
+            .json()
+            .await
+            .context("Failed to parse SQL response")
     }
 
     /// Get current user/account info.
@@ -340,10 +358,7 @@ impl NeonClient {
         };
 
         let host = if pooled {
-            endpoint
-                .pooler_host
-                .as_deref()
-                .unwrap_or(&endpoint.host)
+            endpoint.pooler_host.as_deref().unwrap_or(&endpoint.host)
         } else {
             &endpoint.host
         };
@@ -352,10 +367,7 @@ impl NeonClient {
         let port = if pooled { 5432 } else { 5432 };
 
         // Standard connection string format
-        let connection_string = format!(
-            "postgres://neondb_owner@{}/{}?sslmode=require",
-            host, db
-        );
+        let connection_string = format!("postgres://neondb_owner@{}/{}?sslmode=require", host, db);
 
         Ok(serde_json::json!({
             "connection_string": connection_string,

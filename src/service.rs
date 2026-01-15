@@ -59,9 +59,9 @@ impl NeonService {
         let limit = Self::get_param_i32(&params, "limit", 10);
         let client = self.client.clone();
 
-        let projects = self.runtime.block_on(async move {
-            client.list_projects(Some(limit)).await
-        })?;
+        let projects = self
+            .runtime
+            .block_on(async move { client.list_projects(Some(limit)).await })?;
 
         Ok(serde_json::json!({
             "projects": projects,
@@ -77,9 +77,9 @@ impl NeonService {
 
         let client = self.client.clone();
 
-        let project = self.runtime.block_on(async move {
-            client.get_project(&project_id).await
-        })?;
+        let project = self
+            .runtime
+            .block_on(async move { client.get_project(&project_id).await })?;
 
         Ok(serde_json::to_value(project)?)
     }
@@ -92,9 +92,9 @@ impl NeonService {
 
         let client = self.client.clone();
 
-        let branches = self.runtime.block_on(async move {
-            client.list_branches(&project_id).await
-        })?;
+        let branches = self
+            .runtime
+            .block_on(async move { client.list_branches(&project_id).await })?;
 
         Ok(serde_json::json!({
             "branches": branches,
@@ -113,9 +113,9 @@ impl NeonService {
 
         let client = self.client.clone();
 
-        let databases = self.runtime.block_on(async move {
-            client.list_databases(&project_id, &branch_id).await
-        })?;
+        let databases = self
+            .runtime
+            .block_on(async move { client.list_databases(&project_id, &branch_id).await })?;
 
         Ok(serde_json::json!({
             "databases": databases,
@@ -137,9 +137,9 @@ impl NeonService {
 
         let client = self.client.clone();
 
-        let tables = self.runtime.block_on(async move {
-            client.get_tables(&project_id, &branch_id, &database).await
-        })?;
+        let tables = self
+            .runtime
+            .block_on(async move { client.get_tables(&project_id, &branch_id, &database).await })?;
 
         Ok(tables)
     }
@@ -162,7 +162,9 @@ impl NeonService {
         let client = self.client.clone();
 
         let schema = self.runtime.block_on(async move {
-            client.get_table_schema(&project_id, &branch_id, &database, &table).await
+            client
+                .get_table_schema(&project_id, &branch_id, &database, &table)
+                .await
         })?;
 
         Ok(schema)
@@ -186,7 +188,9 @@ impl NeonService {
         let client = self.client.clone();
 
         let result = self.runtime.block_on(async move {
-            client.run_sql(&project_id, &branch_id, &database, &query).await
+            client
+                .run_sql(&project_id, &branch_id, &database, &query)
+                .await
         })?;
 
         Ok(result)
@@ -196,9 +200,9 @@ impl NeonService {
     fn get_user(&self) -> Result<Value> {
         let client = self.client.clone();
 
-        let user = self.runtime.block_on(async move {
-            client.get_user().await
-        })?;
+        let user = self
+            .runtime
+            .block_on(async move { client.get_user().await })?;
 
         Ok(user)
     }
@@ -233,9 +237,8 @@ impl NeonService {
 
         let client = self.client.clone();
 
-        self.runtime.block_on(async move {
-            client.delete_branch(&project_id, &branch_id).await
-        })?;
+        self.runtime
+            .block_on(async move { client.delete_branch(&project_id, &branch_id).await })?;
 
         Ok(serde_json::json!({ "deleted": true }))
     }
@@ -256,7 +259,12 @@ impl NeonService {
 
         let result = self.runtime.block_on(async move {
             client
-                .get_connection_string(&project_id, branch_id.as_deref(), database.as_deref(), pooled)
+                .get_connection_string(
+                    &project_id,
+                    branch_id.as_deref(),
+                    database.as_deref(),
+                    pooled,
+                )
                 .await
         })?;
 
@@ -537,10 +545,16 @@ impl FgpService for NeonService {
 
         match result {
             Ok(true) => {
-                checks.insert("neon_api".into(), HealthStatus::healthy_with_latency(latency));
+                checks.insert(
+                    "neon_api".into(),
+                    HealthStatus::healthy_with_latency(latency),
+                );
             }
             Ok(false) => {
-                checks.insert("neon_api".into(), HealthStatus::unhealthy("API returned error"));
+                checks.insert(
+                    "neon_api".into(),
+                    HealthStatus::unhealthy("API returned error"),
+                );
             }
             Err(e) => {
                 checks.insert("neon_api".into(), HealthStatus::unhealthy(e.to_string()));

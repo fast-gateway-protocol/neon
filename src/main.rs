@@ -38,11 +38,12 @@ fn get_neon_credentials() -> Result<String> {
 
     // Fall back to neonctl OAuth token
     let creds_path = shellexpand::tilde("~/.config/neonctl/credentials.json").to_string();
-    let creds_json = std::fs::read_to_string(&creds_path)
-        .context("No NEON_API_KEY set and neonctl credentials not found. Run `neonctl auth` first.")?;
+    let creds_json = std::fs::read_to_string(&creds_path).context(
+        "No NEON_API_KEY set and neonctl credentials not found. Run `neonctl auth` first.",
+    )?;
 
-    let creds: NeonctlCredentials = serde_json::from_str(&creds_json)
-        .context("Failed to parse neonctl credentials")?;
+    let creds: NeonctlCredentials =
+        serde_json::from_str(&creds_json).context("Failed to parse neonctl credentials")?;
 
     Ok(creds.access_token)
 }
@@ -108,8 +109,9 @@ fn cmd_start(socket: String, foreground: bool) -> Result<()> {
     let api_key = get_neon_credentials()?;
 
     // Get org_id from environment (required)
-    let org_id = std::env::var("NEON_ORG_ID")
-        .context("NEON_ORG_ID environment variable not set. Run `neonctl orgs list` to find your org_id.")?;
+    let org_id = std::env::var("NEON_ORG_ID").context(
+        "NEON_ORG_ID environment variable not set. Run `neonctl orgs list` to find your org_id.",
+    )?;
 
     let pid_file = format!("{}.pid", socket_path);
 
@@ -124,7 +126,8 @@ fn cmd_start(socket: String, foreground: bool) -> Result<()> {
             .init();
 
         let service = NeonService::new(api_key, org_id).context("Failed to create NeonService")?;
-        let server = FgpServer::new(service, &socket_path).context("Failed to create FGP server")?;
+        let server =
+            FgpServer::new(service, &socket_path).context("Failed to create FGP server")?;
         server.serve().context("Server error")?;
     } else {
         // Background mode - daemonize first, THEN create service
@@ -142,10 +145,10 @@ fn cmd_start(socket: String, foreground: bool) -> Result<()> {
                     .with_env_filter("fgp_neon=debug,fgp_daemon=debug")
                     .init();
 
-                let service = NeonService::new(api_key, org_id)
-                    .context("Failed to create NeonService")?;
-                let server = FgpServer::new(service, &socket_path)
-                    .context("Failed to create FGP server")?;
+                let service =
+                    NeonService::new(api_key, org_id).context("Failed to create NeonService")?;
+                let server =
+                    FgpServer::new(service, &socket_path).context("Failed to create FGP server")?;
                 server.serve().context("Server error")?;
             }
             Err(e) => {
@@ -174,8 +177,8 @@ fn cmd_stop(socket: String) -> Result<()> {
     }
 
     // Read PID
-    let pid_str =
-        std::fs::read_to_string(&pid_file).context("Failed to read PID file - daemon may not be running")?;
+    let pid_str = std::fs::read_to_string(&pid_file)
+        .context("Failed to read PID file - daemon may not be running")?;
     let pid: i32 = pid_str.trim().parse().context("Invalid PID in file")?;
 
     if !pid_matches_process(pid, "fgp-neon") {

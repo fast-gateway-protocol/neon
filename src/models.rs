@@ -69,6 +69,7 @@ pub struct ColumnInfo {
 }
 
 /// SQL query result.
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QueryResult {
     #[serde(default)]
@@ -80,6 +81,7 @@ pub struct QueryResult {
 }
 
 /// Neon API list response wrapper.
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 pub struct ListResponse<T> {
     #[serde(alias = "projects", alias = "branches", alias = "databases")]
