@@ -74,6 +74,33 @@
       "name": "neon.user",
       "description": "Get current user info",
       "params": []
+    },
+    {
+      "name": "neon.create_branch",
+      "description": "Create a new branch",
+      "params": [
+        {"name": "project_id", "type": "string", "required": true},
+        {"name": "name", "type": "string", "required": false},
+        {"name": "parent_id", "type": "string", "required": false}
+      ]
+    },
+    {
+      "name": "neon.delete_branch",
+      "description": "Delete a branch",
+      "params": [
+        {"name": "project_id", "type": "string", "required": true},
+        {"name": "branch_id", "type": "string", "required": true}
+      ]
+    },
+    {
+      "name": "neon.connection_string",
+      "description": "Get connection string for a branch",
+      "params": [
+        {"name": "project_id", "type": "string", "required": true},
+        {"name": "branch_id", "type": "string", "required": false},
+        {"name": "database", "type": "string", "required": false, "default": "neondb"},
+        {"name": "pooled", "type": "boolean", "required": false, "default": false}
+      ]
     }
   ],
   "auth": {

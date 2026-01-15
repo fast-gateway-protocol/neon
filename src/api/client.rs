@@ -57,6 +57,55 @@ impl NeonClient {
             .context("Failed to parse response")
     }
 
+    /// Make an authenticated POST request.
+    async fn post<T: for<'de> Deserialize<'de>>(&self, endpoint: &str, body: &Value) -> Result<T> {
+        let url = format!("{}{}", API_BASE, endpoint);
+
+        let response = self
+            .client
+            .post(&url)
+            .header("Authorization", format!("Bearer {}", self.api_key))
+            .header("Accept", "application/json")
+            .header("Content-Type", "application/json")
+            .json(body)
+            .send()
+            .await
+            .context("Failed to send request")?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let text = response.text().await.unwrap_or_default();
+            anyhow::bail!("API request failed: {} - {}", status, text);
+        }
+
+        response
+            .json()
+            .await
+            .context("Failed to parse response")
+    }
+
+    /// Make an authenticated DELETE request.
+    async fn delete(&self, endpoint: &str) -> Result<()> {
+        let url = format!("{}{}", API_BASE, endpoint);
+
+        let response = self
+            .client
+            .delete(&url)
+            .header("Authorization", format!("Bearer {}", self.api_key))
+            .header("Accept", "application/json")
+            .send()
+            .await
+            .context("Failed to send request")?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let text = response.text().await.unwrap_or_default();
+            anyhow::bail!("API request failed: {} - {}", status, text);
+        }
+
+        Ok(())
+    }
+
     /// Check if the client can connect to Neon API.
     pub async fn ping(&self) -> Result<bool> {
         // Try to list projects (limited to 1) as a health check
@@ -213,5 +262,110 @@ impl NeonClient {
     /// Get current user/account info.
     pub async fn get_user(&self) -> Result<Value> {
         self.get("/users/me").await
+    }
+
+    /// Create a new branch for a project.
+    pub async fn create_branch(
+        &self,
+        project_id: &str,
+        name: Option<&str>,
+        parent_id: Option<&str>,
+    ) -> Result<Branch> {
+        let endpoint = format!("/projects/{}/branches", project_id);
+
+        let mut branch_data = serde_json::json!({});
+        if let Some(n) = name {
+            branch_data["name"] = serde_json::json!(n);
+        }
+        if let Some(p) = parent_id {
+            branch_data["parent_id"] = serde_json::json!(p);
+        }
+
+        let body = serde_json::json!({
+            "branch": branch_data
+        });
+
+        #[derive(Deserialize)]
+        struct CreateBranchResponse {
+            branch: Branch,
+        }
+
+        let response: CreateBranchResponse = self.post(&endpoint, &body).await?;
+        Ok(response.branch)
+    }
+
+    /// Delete a branch from a project.
+    pub async fn delete_branch(&self, project_id: &str, branch_id: &str) -> Result<()> {
+        let endpoint = format!("/projects/{}/branches/{}", project_id, branch_id);
+        self.delete(&endpoint).await
+    }
+
+    /// Get connection string for a project/branch.
+    pub async fn get_connection_string(
+        &self,
+        project_id: &str,
+        branch_id: Option<&str>,
+        database: Option<&str>,
+        pooled: bool,
+    ) -> Result<Value> {
+        let endpoints_url = format!("/projects/{}/endpoints", project_id);
+
+        #[derive(Deserialize)]
+        struct Endpoint {
+            id: String,
+            host: String,
+            branch_id: String,
+            pooler_host: Option<String>,
+        }
+
+        #[derive(Deserialize)]
+        struct EndpointsResponse {
+            endpoints: Vec<Endpoint>,
+        }
+
+        let endpoints: EndpointsResponse = self.get(&endpoints_url).await?;
+
+        // Find the appropriate endpoint
+        let endpoint = if let Some(bid) = branch_id {
+            endpoints
+                .endpoints
+                .iter()
+                .find(|e| e.branch_id == bid)
+                .ok_or_else(|| anyhow::anyhow!("No endpoint found for branch {}", bid))?
+        } else {
+            endpoints
+                .endpoints
+                .first()
+                .ok_or_else(|| anyhow::anyhow!("No endpoints found for project"))?
+        };
+
+        let host = if pooled {
+            endpoint
+                .pooler_host
+                .as_deref()
+                .unwrap_or(&endpoint.host)
+        } else {
+            &endpoint.host
+        };
+
+        let db = database.unwrap_or("neondb");
+        let port = if pooled { 5432 } else { 5432 };
+
+        // Standard connection string format
+        let connection_string = format!(
+            "postgres://neondb_owner@{}/{}?sslmode=require",
+            host, db
+        );
+
+        Ok(serde_json::json!({
+            "connection_string": connection_string,
+            "host": host,
+            "port": port,
+            "user": "neondb_owner",
+            "database": db,
+            "pooled": pooled,
+            "branch_id": endpoint.branch_id,
+            "endpoint_id": endpoint.id,
+        }))
     }
 }

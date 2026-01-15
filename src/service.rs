@@ -202,6 +202,66 @@ impl NeonService {
 
         Ok(user)
     }
+
+    /// Create branch implementation.
+    fn create_branch(&self, params: HashMap<String, Value>) -> Result<Value> {
+        let project_id = Self::get_param_str(&params, "project_id")
+            .ok_or_else(|| anyhow::anyhow!("Missing required parameter: project_id"))?
+            .to_string();
+        let name = Self::get_param_str(&params, "name").map(|s| s.to_string());
+        let parent_id = Self::get_param_str(&params, "parent_id").map(|s| s.to_string());
+
+        let client = self.client.clone();
+
+        let branch = self.runtime.block_on(async move {
+            client
+                .create_branch(&project_id, name.as_deref(), parent_id.as_deref())
+                .await
+        })?;
+
+        Ok(serde_json::to_value(branch)?)
+    }
+
+    /// Delete branch implementation.
+    fn delete_branch(&self, params: HashMap<String, Value>) -> Result<Value> {
+        let project_id = Self::get_param_str(&params, "project_id")
+            .ok_or_else(|| anyhow::anyhow!("Missing required parameter: project_id"))?
+            .to_string();
+        let branch_id = Self::get_param_str(&params, "branch_id")
+            .ok_or_else(|| anyhow::anyhow!("Missing required parameter: branch_id"))?
+            .to_string();
+
+        let client = self.client.clone();
+
+        self.runtime.block_on(async move {
+            client.delete_branch(&project_id, &branch_id).await
+        })?;
+
+        Ok(serde_json::json!({ "deleted": true }))
+    }
+
+    /// Get connection string implementation.
+    fn get_connection_string(&self, params: HashMap<String, Value>) -> Result<Value> {
+        let project_id = Self::get_param_str(&params, "project_id")
+            .ok_or_else(|| anyhow::anyhow!("Missing required parameter: project_id"))?
+            .to_string();
+        let branch_id = Self::get_param_str(&params, "branch_id").map(|s| s.to_string());
+        let database = Self::get_param_str(&params, "database").map(|s| s.to_string());
+        let pooled = params
+            .get("pooled")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+
+        let client = self.client.clone();
+
+        let result = self.runtime.block_on(async move {
+            client
+                .get_connection_string(&project_id, branch_id.as_deref(), database.as_deref(), pooled)
+                .await
+        })?;
+
+        Ok(result)
+    }
 }
 
 impl FgpService for NeonService {
@@ -224,6 +284,9 @@ impl FgpService for NeonService {
             "schema" | "neon.schema" => self.get_table_schema(params),
             "sql" | "neon.sql" => self.run_sql(params),
             "user" | "neon.user" => self.get_user(),
+            "create_branch" | "neon.create_branch" => self.create_branch(params),
+            "delete_branch" | "neon.delete_branch" => self.delete_branch(params),
+            "connection_string" | "neon.connection_string" => self.get_connection_string(params),
             _ => anyhow::bail!("Unknown method: {}", method),
         }
     }
@@ -366,6 +429,78 @@ impl FgpService for NeonService {
                 name: "neon.user".into(),
                 description: "Get current user info".into(),
                 params: vec![],
+            },
+            MethodInfo {
+                name: "neon.create_branch".into(),
+                description: "Create a new branch".into(),
+                params: vec![
+                    ParamInfo {
+                        name: "project_id".into(),
+                        param_type: "string".into(),
+                        required: true,
+                        default: None,
+                    },
+                    ParamInfo {
+                        name: "name".into(),
+                        param_type: "string".into(),
+                        required: false,
+                        default: None,
+                    },
+                    ParamInfo {
+                        name: "parent_id".into(),
+                        param_type: "string".into(),
+                        required: false,
+                        default: None,
+                    },
+                ],
+            },
+            MethodInfo {
+                name: "neon.delete_branch".into(),
+                description: "Delete a branch".into(),
+                params: vec![
+                    ParamInfo {
+                        name: "project_id".into(),
+                        param_type: "string".into(),
+                        required: true,
+                        default: None,
+                    },
+                    ParamInfo {
+                        name: "branch_id".into(),
+                        param_type: "string".into(),
+                        required: true,
+                        default: None,
+                    },
+                ],
+            },
+            MethodInfo {
+                name: "neon.connection_string".into(),
+                description: "Get connection string for a branch".into(),
+                params: vec![
+                    ParamInfo {
+                        name: "project_id".into(),
+                        param_type: "string".into(),
+                        required: true,
+                        default: None,
+                    },
+                    ParamInfo {
+                        name: "branch_id".into(),
+                        param_type: "string".into(),
+                        required: false,
+                        default: None,
+                    },
+                    ParamInfo {
+                        name: "database".into(),
+                        param_type: "string".into(),
+                        required: false,
+                        default: Some(serde_json::json!("neondb")),
+                    },
+                    ParamInfo {
+                        name: "pooled".into(),
+                        param_type: "boolean".into(),
+                        required: false,
+                        default: Some(serde_json::json!(false)),
+                    },
+                ],
             },
         ]
     }
