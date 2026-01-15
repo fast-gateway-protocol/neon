@@ -89,6 +89,7 @@ pub struct ListResponse<T> {
 }
 
 /// Neon API error response.
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 pub struct ApiError {
     pub code: String,
